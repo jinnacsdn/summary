@@ -1,0 +1,86 @@
+#coding:utf8
+  2 import nltk
+  3 nltk.download('stopwords')
+  4 nltk.download('punkt')
+  5 from nltk.tokenize import sent_tokenize, word_tokenize
+  6 from nltk.corpus import stopwords
+  7 from collections import defaultdict
+  8 from string import punctuation
+  9 from heapq import nlargest
+ 10 stopwords = set(stopwords.words('english') + list(punctuation))
+ 11 max_cut = 0.9
+ 12 min_cut = 0.1
+ 13 """
+ 14 计算出每个词出现的频率
+ 15 word_sent 是一个已经分好词的列表
+ 16 返回一个词典freq[],
+ 17 freq[w]代表了w出现的频率
+ 18 """
+ 19 def compute_frequencies(word_sent):
+ 20     """
+ 21     defaultdict和普通的dict
+ 22     的区别是它可以设置default值
+ 23     参数是int默认值是0
+ 24     """
+ 25     freq = defaultdict(int)
+ 26 
+ 27     #统计每个词出现的频率
+ 28     for s in word_sent:
+ 29         for word in s:
+ 30             #注意stopwords
+ 31             if word not in stopwords:
+ 32                 freq[word] += 1
+ 33 
+ 34     #得出最高出现频次m
+ 35     m = float(max(freq.values()))
+ 36     #所有单词的频次统除m
+ 37     for w in list(freq.keys()):
+ 38         freq[w] = freq[w]/m
+ 39         if freq[w] >= max_cut or freq[w] <= min_cut:
+ 40             del freq[w]
+ 41     # 最后返回的是
+ 42     # {key:单词, value: 重要性}
+ 43     return freq
+ 44 def summarize(text, n):
+ 45     """
+ 46     用来总结的主要函数
+ 47     text是输入的文本
+ 48     n是摘要的句子个数
+ 49     返回包含摘要的列表
+ 50     """
+ 51 
+ 52     # 首先先把句子分出来
+ 53     sents = sent_tokenize(text)
+ 54     assert n <= len(sents)
+ 55 
+ 56     # 然后再分词
+ 57     word_sent = [word_tokenize(s.lower()) for s in sents]
+ 58 
+ 59     # freq是一个词和词重要性的字典
+ 60     freq = compute_frequencies(word_sent)
+ 61     #ranking则是句子和句子重要性的词典
+ 62     ranking = defaultdict(int)
+ 63     for i, word in enumerate(word_sent):
+ 64         for w in word:
+ 65             if w in freq:
+ 66                 ranking[i] += freq[w]
+ 67     sents_idx = rank(ranking, n)
+ 68     return [sents[j] for j in sents_idx]
+ 69 
+ 70 """
+ 71 考虑到句子比较多的情况
+ 72 用遍历的方式找最大的n个数比较慢
+ 73 我们这里调用heapq中的函数
+ 74 创建一个最小堆来完成这个功能
+ 75 返回的是最小的n个数所在的位置
+ 76 """
+ 77 def rank(ranking, n):
+ 78     return nlargest(n, ranking, key=ranking.get)
+ 79 
+ 80 if __name__ == '__main__':
+ 81     with open("news.txt", "r") as myfile:
+ 82         text = myfile.read().replace('\n','')
+ 83     res = summarize(text, 2)
+ 84     for i in range(len(res)):
+ 85         print(res[i])
+
